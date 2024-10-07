@@ -2,7 +2,7 @@ import psycopg2
 import random
 from datetime import datetime
 
-# Параметры подключения к базе данных(для безопастности оставлены пустыми)
+# Параметры подключения к базе данных (для безопасности оставлены пустыми)
 conn = psycopg2.connect(
     host="",
     database="",
@@ -11,12 +11,19 @@ conn = psycopg2.connect(
 )
 
 # Функция для генерации случайного статуса дрона
-def generate_status(drone_id):
-    battery_level = round(random.uniform(5.0, 100.0), 2)  # Уровень заряда от 5 до 100
-    signal_strength = round(random.uniform(0.0, 100.0), 2)  # Мощность сигнала от 0 до 100
-    x_coordinate = round(random.uniform(-1000.0, 1000.0), 2)  # X-координата от -1000 до 1000
-    y_coordinate = round(random.uniform(-1000.0, 1000.0), 2)  # Y-координата от -1000 до 1000
-    z_coordinate = round(random.uniform(0.0, 500.0), 2)  # Z-координата от 0 до 500
+def generate_status(drone_id, current_coordinates):
+    battery_level = round(random.uniform(5.0, 100.0), 2)  
+    signal_strength = round(random.uniform(5.0, 100.0), 2)  
+    
+  
+    x_offset = round(random.uniform(-5.0, 5.0), 2)
+    y_offset = round(random.uniform(-5.0, 5.0), 2)
+    z_offset = round(random.uniform(-1.0, 1.0), 2)  
+
+    x_coordinate = round(current_coordinates[0] + x_offset, 2)
+    y_coordinate = round(current_coordinates[1] + y_offset, 2)
+    z_coordinate = round(current_coordinates[2] + z_offset, 2)
+
     timestamp = datetime.now()  # Текущее время
     
     return (drone_id, battery_level, signal_strength, x_coordinate, y_coordinate, z_coordinate, timestamp)
@@ -32,16 +39,17 @@ def insert_status(cursor, status_data):
 # Генерация и добавление данных для всех дронов
 def generate_and_insert_statuses():
     with conn.cursor() as cursor:
-        # Получаем список всех ID дронов
-        cursor.execute("SELECT ID FROM Dron")
+        # Получаем список всех ID дронов и их текущие координаты
+        cursor.execute("SELECT ID, X_Coordinate, Y_Coordinate, Z_Coordinate FROM Dron")
         drones = cursor.fetchall()
 
         # Генерация случайного статуса для каждого дрона
         for drone in drones:
-            status_data = generate_status(drone[0])
+            drone_id = drone[0]
+            current_coordinates = (drone[1], drone[2], drone[3])
+            status_data = generate_status(drone_id, current_coordinates)
             insert_status(cursor, status_data)
-        
-        # Подтверждаем изменения
+    
         conn.commit()
 
 # Запускаем генерацию и вставку данных
